@@ -23,22 +23,23 @@
 
 
 RUNDIR=$1  	# "/Work/data/" RawData
-CROSSCDIR=$2	# "/Work/external/" crossC
-Virus=$3        # "HIV","HBV", "HCV"
-SEQlength=$4 	# "100 (Minimum Sequence length)"
-PROJECT=$5 	# "Project name"
+Virus=$2        # "HIV","HBV", "HCV"
+SEQlength=$3 	# "Minimum Sequence length"
+PROJECT=$4 	# "Project name"
 
-if [[ "$RUNDIR" == "" || "$CROSSCDIR" == "" || "$Virus" == "" || "$PROJECT" == "" ]] 
+CROSSCDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"   # path where ViCroSeq-master is downloaded
+
+if [[ "$RUNDIR" == "" || "$Virus" == "" || "$PROJECT" == "" ]] 
    then
 	echo " *---*"
- 	echo " pCrossCont.sh      arg1:path where RawData directory is located      arg2: path where crossC is downloaded      arg3: HIV or HBV or HCV            arg4: Minimum sequence length (between 100 and 500)       arg5: Project's name (one word)."
+ 	echo " pCrossCont.sh      arg1:path where RawData directory is located      arg2: HIV or HBV or HCV            arg3: Minimum sequence length (between 100 and 500)       arg4: Project's name (one word)."
 	echo ".fastq.gz (R1, R2) files must be in RawData dir".
 	echo " *---*"
 	exit
    fi
 
-PIPELINEDIR=$CROSSCDIR"crossC/scripts"
-REFERENCEFILE=$CROSSCDIR"crossC/General/HXB2R.fna"   
+PIPELINEDIR=$CROSSCDIR"/scripts"
+REFERENCEFILE=$CROSSCDIR"/General/HXB2R.fna"   
 
 if [[ "$Virus" != "HIV" && "$Virus" != "HBV" && "$Virus" != "HCV" ]] 
    then
@@ -51,20 +52,20 @@ if [[ "$Virus" != "HIV" && "$Virus" != "HBV" && "$Virus" != "HCV" ]]
 if [[ "$Virus" == "HIV" ]] 
    then
 	echo "HIV "
-	REFERENCEFILEALL=$CROSSCDIR"crossC/General/Alltypes_Refe.fasta" 
-	REFERENCEFILE=$CROSSCDIR"crossC/General/HXB2R.fna"
+	REFERENCEFILEALL=$CROSSCDIR"/General/Alltypes_Refe.fasta" 
+	REFERENCEFILE=$CROSSCDIR"/General/HXB2R.fna"
 	REFCOPIED="HXB2R.fna"
    elif [[ "$Virus" == "HBV" ]] 
    then
 	echo "HBV "
-	REFERENCEFILEALL=$CROSSCDIR"crossC/General/HBV_Refe.fasta" 
-	REFERENCEFILE=$CROSSCDIR"crossC/General/HBV_Refe.fasta"
+	REFERENCEFILEALL=$CROSSCDIR"/General/HBV_Refe.fasta" 
+	REFERENCEFILE=$CROSSCDIR"/General/HBV_Refe.fasta"
 	REFCOPIED="HBV_Refe.fasta"
    elif [[ "$Virus" == "HCV" ]] 
    then
 	echo "HCV"
-	REFERENCEFILEALL=$CROSSCDIR"crossC/General/HCV_Refe.fasta" 
-	REFERENCEFILE==$CROSSCDIR"crossC/General/HCV_Refe.fasta"
+	REFERENCEFILEALL=$CROSSCDIR"/General/HCV_Refe.fasta" 
+	REFERENCEFILE==$CROSSCDIR"/General/HCV_Refe.fasta"
 	REFCOPIED="HCV_Refe.fasta"
    else
         echo "** "
@@ -295,6 +296,8 @@ do
 	fi
 done
 
+#for file in $RUNDIR/RawData/*.fastq; do echo $file; seq=`cat $file | wc -l`; nseq=$((seq / 4)); namefile=${file#$RUNDIR/RawData/}; echo -e $namefile"\t"$nseq >> $RUNDIR/RawData/Nseq.txt; done
+
 fname="$RUNDIR/RawData/Nseq.txt"  
 exec<$fname
 while read line
@@ -336,7 +339,7 @@ wait
 echo "** Align to get coverage and filter if coverage < 500"
 echo ""
 
-cp $REFERENCEFILE $RUNDIR/crossCont/     # HXB2R            
+cp $REFERENCEFILE $RUNDIR/crossCont/     
 bwa index -a is $REFCOPIED 2> log.txt
 
 for file in $RUNDIR/crossCont/*_R1*.fastq; 

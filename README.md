@@ -1,10 +1,10 @@
 ## License
-ViCroSeq is free software: you can redistribute it and/or modify
+**ViCroSeq** is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
 
-ViCroSeq is distributed in the hope that it will be useful,
+**ViCroSeq** is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
@@ -18,9 +18,9 @@ along with ViCroSeq.  If not, see <http://www.gnu.org/licenses/>.
 * **Marc Noguera-Julian**  - mnoguera _at_ irsicaixa.es - 
 * **M. Cristina Rodr&iacute;guez** - crodriguez _at_ irsicaixa.es - 
 
-# Cross Contamination
+# ViCroSeq
 
-**CrossCont** is a tool to check cross contamination between different samples from the same HIV, HBV or HCV virus sequencing run.  
+**ViCroSeq** is a tool to check cross contamination between different samples from the same HIV, HBV or HCV virus sequencing run.  
   
 * Input: Paired-end fastq files ( R1,R2 ), could be compressed by gzip or bz2.    
 
@@ -35,7 +35,7 @@ along with ViCroSeq.  If not, see <http://www.gnu.org/licenses/>.
 
 ## Description  
 
-** crossC ** directory has the main script  ** pCrossCont.sh ** and two folders:  
+** ViCroSeq-master ** directory has the main script  ** pCrossCont.sh ** and two folders:  
    * ** General ** with the References files.  
    * ** scripts ** with secondary scripts.   
 
@@ -76,16 +76,16 @@ Copy fastq files to "/**RawData**/" directory.
      http://manpages.ubuntu.com/manpages/wily/man1/fastq-stats.1.html  
 
 ## Installation  
-Download "crossC" folder.  
+Download "ViCroSeq" folder.  
 Inside will be pCrossCont.sh script.  
 
 ## Running the test
 
-** pCrossCont.sh**   arg1: "path where RawData directory is located"      arg2: "path where crossC is downloaded"      arg3: "Sequenced virus HIV, HBV or HCV"      arg4: Minimum sequence length to filter (between 100 and 500)    arg5: "Project's name (please, only one word)."
+** pCrossCont.sh**   arg1: "path where RawData directory is located"      arg2: "Sequenced virus HIV, HBV or HCV"      arg3: Minimum sequence length to filter (between 100 and 500)    arg4: "Project's name (please, only one word)."
 
 
 `Ex:`   
-`sh ./pCrossCont.sh "/home/user/" "/Work/downloaded/" "HIV" 100 "TestHiv"`  
+`sh ./pCrossCont.sh "/home/user/" "HIV" 100 "TestHiv"`  
 
 
 
