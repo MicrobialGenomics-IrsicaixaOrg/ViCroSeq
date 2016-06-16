@@ -35,7 +35,7 @@ along with ViCroSeq.  If not, see <http://www.gnu.org/licenses/>.
 
 ## Description  
 
-**ViCroSeq-master** directory has the main script  ** pCrossCont.sh ** and two folders:  
+**ViCroSeq-master** directory has the main script  **pCrossCont.sh** and two folders:  
    * **General** with the References files.  
    * **scripts** with secondary scripts.   
 
@@ -81,7 +81,7 @@ Inside will be pCrossCont.sh script.
 
 ## Running the test
 
-**pCrossCont.sh**   arg1: "path where RawData directory is located"      arg2: "Sequenced virus HIV, HBV or HCV"      arg3: Minimum sequence length to filter (between 100 and 500)    arg4: "Project's name (please, only one word)."
+**pCrossCont.sh**   arg1: "path where RawData directory is located"      arg2: "Sequenced virus: HIV, HBV or HCV"      arg3: Minimum sequence length to filter (between 100 and 500)    arg4: "Project's name (please, only one word)."
 
 
 `Ex:`   
