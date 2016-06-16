@@ -83,7 +83,7 @@ along with ViCroSeq.  If not, see <http://www.gnu.org/licenses/>.
 
 ## Authors
 
-* **Marc Noguera-Julian**  - mnoguera@irsicaixa.es - 
-* **M. Cristina Rodr&iacute;guez** - crodriguez@irsicaixa.es - 
+* **Marc Noguera-Julian**  - mnoguera _at_ irsicaixa.es - 
+* **M. Cristina Rodr&iacute;guez** - crodriguez _at_ irsicaixa.es - 
 
 
