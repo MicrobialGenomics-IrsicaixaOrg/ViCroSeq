@@ -1,3 +1,23 @@
+## License
+ViCroSeq is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+ViCroSeq is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with ViCroSeq.  If not, see <http://www.gnu.org/licenses/>.  
+
+
+## Authors
+
+* **Marc Noguera-Julian**  - mnoguera _at_ irsicaixa.es - 
+* **M. Cristina Rodr&iacute;guez** - crodriguez _at_ irsicaixa.es - 
+
 # Cross Contamination
 
 **CrossCont** is a tool to check cross contamination between different samples from the same HIV, HBV or HCV virus sequencing run.  
@@ -67,23 +87,7 @@ Inside will be pCrossCont.sh script.
 `Ex:`   
 `sh ./pCrossCont.sh "/home/user/" "/Work/downloaded/" "HIV" 100 "TestHiv"`  
 
-## License
-ViCroSeq is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
 
-ViCroSeq is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License
-along with ViCroSeq.  If not, see <http://www.gnu.org/licenses/>.  
-
-## Authors
-
-* **Marc Noguera-Julian**  - mnoguera _at_ irsicaixa.es - 
-* **M. Cristina Rodr&iacute;guez** - crodriguez _at_ irsicaixa.es - 
 
 
