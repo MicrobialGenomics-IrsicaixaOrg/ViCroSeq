@@ -35,9 +35,9 @@ along with ViCroSeq.  If not, see <http://www.gnu.org/licenses/>.
 
 ## Description  
 
-** ViCroSeq-master ** directory has the main script  ** pCrossCont.sh ** and two folders:  
-   * ** General ** with the References files.  
-   * ** scripts ** with secondary scripts.   
+**ViCroSeq-master** directory has the main script  ** pCrossCont.sh ** and two folders:  
+   * **General** with the References files.  
+   * **scripts** with secondary scripts.   
 
 ## Prerequisities
 
@@ -45,33 +45,33 @@ Create **RawData** directory.
 Copy fastq files to "/**RawData**/" directory.   
     
 **Software that should be installed and be in $PATH:**   
-* ** Samtools ** Tools for alignments in the SAM format.  
+* **Samtools** Tools for alignments in the SAM format.  
      Version: samtools 1.2 Using htslib 1.2.1   
      http://www.htslib.org/download/   
 
-* ** bcftools ** Is a set of utilities that manipulate variant calls in the Variant Call Format (VCF) and its binary counterpart BCF.  
+* **bcftools** Is a set of utilities that manipulate variant calls in the Variant Call Format (VCF) and its binary counterpart BCF.  
      Version: 1.2 (using htslib 1.2.1).  
      http://www.htslib.org/doc/#manual-pages  
 
-* ** vcfutils.pl ** It's part of the samtools distribution. If you download samtools, it should contain a "bcftools" folder, which contains vcfutils.pl. 
+* **vcfutils.pl** It's part of the samtools distribution. If you download samtools, it should contain a "bcftools" folder, which contains vcfutils.pl. 
 
-* ** BWA ** Burrows-Wheeler Aligner is a software package for mapping low-divergent sequences against a large reference genome.  
+* **BWA** Burrows-Wheeler Aligner is a software package for mapping low-divergent sequences against a large reference genome.  
      Version: 0.7.13-r1126  
      https://sourceforge.net/projects/bio-bwa/files/  
 
-* ** bbsplit.sh **  Is a tool that bins reads by mapping to multiple references simultaneously, using BBMap (aligner for DNA/RNAseq).   
+* **bbsplit.sh**  Is a tool that bins reads by mapping to multiple references simultaneously, using BBMap (aligner for DNA/RNAseq).   
      Version: BBSplit / BBMap v35.x.  
      http://seqanswers.com/forums/showthread.php?t=41288
 
-* ** Rscript **  Scripting front-end. ( libraries: reshape2, RCircos; circlize )  
+* **Rscript**  Scripting front-end. ( libraries: reshape2, RCircos; circlize )  
      Version 3.2.0 (2015-04-16)  
      https://cran.r-project.org/
 
-* ** seqtk ** Toolkit for processing sequences in FASTA/Q formats.  
+* **seqtk** Toolkit for processing sequences in FASTA/Q formats.  
      Version: 1.1-r91.  
      https://github.com/lh3/seqtk  
 
-* ** fastq-stats ** Produces statistics for the files listed.  
+* **fastq-stats** Produces statistics for the files listed.  
      Version: 1.01.  
      http://manpages.ubuntu.com/manpages/wily/man1/fastq-stats.1.html  
 
@@ -81,7 +81,7 @@ Inside will be pCrossCont.sh script.
 
 ## Running the test
 
-** pCrossCont.sh**   arg1: "path where RawData directory is located"      arg2: "Sequenced virus HIV, HBV or HCV"      arg3: Minimum sequence length to filter (between 100 and 500)    arg4: "Project's name (please, only one word)."
+**pCrossCont.sh**   arg1: "path where RawData directory is located"      arg2: "Sequenced virus HIV, HBV or HCV"      arg3: Minimum sequence length to filter (between 100 and 500)    arg4: "Project's name (please, only one word)."
 
 
 `Ex:`   
