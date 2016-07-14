@@ -90,7 +90,7 @@ fi
 #.................
 
 cd $RUNDIR
-echo "**  Rundir   **"
+echo "**  Rundir: "
 pwd
 
 #.......................................... functions ..............................................#
@@ -112,40 +112,29 @@ linkf (){
 
 samf (){ 
 	local fileR1=$1 
-	echo $fileR1  
 	fileR2=`echo $fileR1 | sed s/_R1/_R2/` 
-	echo $fileR2   
 	samfile=${fileR1%%_R1*.fastq}_bwa.sam  
-	echo " ** sam file= $samfile "  
-	#bwa mem HXB2R.fna $fileR1 $fileR2 > $samfile 2>> log.txt
 	bwa mem $REFCOPIED $fileR1 $fileR2 > $samfile 2>> log.txt
 }
 
 sortedf (){    #*_bwa.sam
 	local fileR1=$1 
-	echo $file  
 	fileout=${file%%.sam}_sorted  
-	echo "** sorted bam file= $fileout "  
 	samtools view -Shb $file | samtools sort - $fileout 2>> log.txt   
 }
 
 depthf (){ 
 	local fileb=$1  # *_bwa_sorted.bam
-	echo $fileb  
 	fileout=${fileb%%_bwa_sorted.bam}_bwa_depth.txt  
-    	echo "** depth file= $fileout"   
 	samtools depth $fileb >  $fileout    # K03455|HIVHXB2CG	2114	50  =>  id   posición   coverage
 }
 
 decontam (){
         local file1=$1  # *_R1*.fastq
 	fileR1=${file1##$RUNDIR/crossCont/}
-        echo " ** decontam file R1= $fileR1" 
         fileR2=`echo $fileR1 | sed s/_R1/_R2/` 
-        echo " ** decontam file R2= $fileR2"  
         sample=${fileR1%%_R1*.fastq} 
-        echo $sample  
-        bbsplit.sh build=1 in1=$fileR1 in2=$fileR2 basename=$RUNDIR/crossCont/desContam/$sample/out_%.fq outu1=$RUNDIR/crossCont/desContam/$sample/clean1.fq outu2=$RUNDIR/crossCont/desContam/$sample/clean2.fq scafstats=$RUNDIR/crossCont/desContam/$sample/scafstats.txt 2>> log.txt
+        sh bbsplit.sh build=1 in1=$fileR1 in2=$fileR2 basename=$RUNDIR/crossCont/desContam/$sample/out_%.fq outu1=$RUNDIR/crossCont/desContam/$sample/clean1.fq outu2=$RUNDIR/crossCont/desContam/$sample/clean2.fq scafstats=$RUNDIR/crossCont/desContam/$sample/scafstats.txt 2>> log.txt
    
 }
 
@@ -154,7 +143,6 @@ sbtypref (){
 	fileR1=${file1##$RUNDIR/crossCont/}
 	sample=${fileR1%%_R1*.fastq}  
 	fileout=$sample"_clean.fq"  
-	echo " ** decontam file clean= $fileout"  
 	cp $RUNDIR/crossCont/desContam/$sample/out_Alltypes_Refe.fq ./$fileout  
    #. move to dir
 	cd $RUNDIR/crossCont/desContam/$sample/
@@ -164,78 +152,62 @@ sbtypref (){
 	fileSbref=$sample"_sbtypeRef.fasta"  
 	fgrep -A 1 $intid $REFERENCEFILEALL > $RUNDIR/crossCont/SubtypeRefs/$fileSbref 
 	cd $RUNDIR/crossCont/ 
-	pwd 
 }
 
 sbtypind (){
 	local fileRef=$1  # SubtypeRefs/*_sbtypeRef.fasta
-	echo $file  
 	bwa index -a is $fileRef 2>> log.txt
 }
 
 
 alignfq (){
 	local filef=$1  # $RUNDIR/crossCont/*_clean.fq
-	echo " ** clean.fq= $filef " 
 	fileff=${filef##$RUNDIR/crossCont/}
 	sample=${fileff%%_clean.fq}  
 	fileref=$RUNDIR/crossCont/SubtypeRefs/$sample"_sbtypeRef.fasta" 
-	echo " ** reference= $fileref "
 	outfile=$sample"_NRclean.sam" 
 	bwa mem $fileref $filef > $outfile 2>> log.txt
 }
 
 sortedsam (){
 	local filesam=$1  # *_NRclean.sam
-	echo $filesam  
 	fileout=${filesam%%.sam}_sorted  
-	echo $fileout  
 	samtools view -Shb $filesam | samtools sort - $fileout 2>> log.txt  
 }
 
 consens (){
 	local filebam=$1  # $RUNDIR/crossCont/*_NRclean_sorted.bam
-	echo " ** _sorted.bam= $filebam"  
 	filebamm=${filebam##$RUNDIR/crossCont/}
 	sample=${filebamm%%_NRclean_sorted.bam}  
 	fileout=$sample"_cons.fastq" 
-	echo " ** output file: $fileout "   
 	fileref=$RUNDIR"/crossCont/SubtypeRefs/"$sample"_sbtypeRef.fasta" 
 	samtools mpileup -E -uf $fileref $filebam | bcftools call -c | vcfutils.pl vcf2fq > $fileout 2>> log.txt 
 }
 
 fqfasta (){
 	local fileq=$1  # *_cons.fastq 
-	echo " ** _cons.fastq= $fileq"  
 	fileout=${fileq%%.fastq}.fasta  
-	echo $fileout 
 	seqtk seq -a $fileq > $fileout   
 }
 
 depthft (){
 	local fileb=$1  # *_NRclean_sorted.bam
-	echo $fileb  
 	fileout=${fileb%%_NRclean_sorted.bam}_depth.txt          
-	echo $fileout   
 	samtools depth $fileb >  $fileout 2>> log.txt 
 }
 
 removel (){
 	local filec=$1  # _cons.fasta
-	echo $filec  
 	filedp=${filec%%_cons.fasta}_depth.txt 
-	echo " ** depth file: $filedp " 
 	fileout=${filec%%_cons.fasta}clean_consdp.fasta 
-	echo " ** output file: $fileout "  				
  	perl $PIPELINEDIR/filterByDepth.pl -i $filec -d $filedp > $fileout 
 }
 
 lastclassify (){     # $RUNDIR/crossCont/*_clean.fq
 	local fileq=$1    
-	echo " ** clean file: $fileq" 
 	fileqq=${fileq##$RUNDIR/crossCont/}
 	sample=${fileqq%%_clean.fq} 
-	bbsplit.sh build=1 in=$fileq basename=./finalDir/$sample/out_%.fq outu=./finalDir/$sample/clean.fq 2>> log.txt 
+	sh bbsplit.sh build=1 in=$fileq basename=./finalDir/$sample/out_%.fq outu=./finalDir/$sample/clean.fq 2>> log.txt 
 }
 
 
@@ -276,6 +248,34 @@ do echo $file;
 done
 wait
 
+# Check paired fastq files.  					
+#..............................................................................................#
+echo "** Check paired fastq files."
+echo ""
+
+for file in $RUNDIR/RawData/*.fastq;
+do
+	if [[ "$file" =~ "R1" ]];
+	then
+		fileR2=`echo $file | sed s/_R1/_R2/`
+		if [[ ! -e $fileR2 ]]
+		then 
+			echo "* Err0, Checking paired fastq files, $fileR2 not found."
+			echo "  "
+			exit
+		fi
+	elif [[ "$file" =~ "R2" ]];
+	then 	
+		fileR1=`echo $file | sed s/_R2/_R1/`
+		if [[ ! -e $fileR1 ]]
+		then 
+			echo "* Err0, Checking paired fastq files, $fileR1 not found."
+			echo "  "
+			exit
+		fi
+	fi
+done
+
 # Check number of sequences from R1 and R2 fastq files.  					
 #..............................................................................................#
 echo "** Check number of sequences from R1 and R2 fastq files."
@@ -285,24 +285,21 @@ for file in $RUNDIR/RawData/*.fastq;
 do
 	if [[ -e $file || ! -s $file ]]
 	then
-		echo $file 
 		seq=`cat $file | wc -l` 
 		nseq=$((seq / 4)) 
 		namefile=${file#$RUNDIR/RawData/} 
 		echo -e $namefile"\t"$nseq >> $RUNDIR/RawData/Nseq.txt
 	else
-		echo "* Err1, Checking number of sequences, /RawData/*.fastq not found or empty"
+		echo "* Err1, Checking number of sequences, $file not found or empty"
 		exit
 	fi
 done
-
-#for file in $RUNDIR/RawData/*.fastq; do echo $file; seq=`cat $file | wc -l`; nseq=$((seq / 4)); namefile=${file#$RUNDIR/RawData/}; echo -e $namefile"\t"$nseq >> $RUNDIR/RawData/Nseq.txt; done
 
 fname="$RUNDIR/RawData/Nseq.txt"  
 exec<$fname
 while read line
 do
-                f1=`echo $line | awk -F" " '{print $1}'`   
+                f1=`echo $line | awk -F" " '{print $1}'`     # Hepik-62_S63_L001_R1_001.fastq
                 file1=`echo $f1 | awk -F"_" '{print $1}'` 
                 nseq1=`echo $line | awk -F" " '{print $2}'` 
                 read line
@@ -311,13 +308,21 @@ do
                 nseq2=`echo $line | awk -F" " '{print $2}'`   
 		if [[ "$file1" -eq "$file2" && "$nseq1" -ne "$nseq2" ]]  
                 then
-                        echo "** $file1 R1, R2 have different number of sequences" 
+			echo "" 
+                        echo "!!! Sample $file1 fastq files (R1, R2) have different number of sequences" 
+                        echo "!!! We will resynchronize them, the unsynchronized fastq files will be at /RawData/diffR1R2NSeq." 
+			echo "" 
 			if [[ ! -d $RUNDIR/RawData/diffR1R2NSeq ]]
     			then
    				 echo "** Creating /RawData/diffR1R2NSeq Directory." 
     				 mkdir $RUNDIR/RawData/diffR1R2NSeq 
 			fi
-			mv $f1 $f2 $RUNDIR/RawData/diffR1R2NSeq/      			
+			fout1=${f1%%.fastq}_resync.fastq
+			fout2=${f2%%.fastq}_resync.fastq
+			perl $PIPELINEDIR/own_resync.pl $f1 $f2 $fout1 $fout2
+			cp $f1 $f2 $RUNDIR/RawData/diffR1R2NSeq/ 
+			mv $fout1 $f1 
+			mv $fout2 $f2 			
                 fi
 done
 
@@ -410,7 +415,7 @@ cat meanCov.txt |  awk '{if ($2 < 500) print $1"\t"$2 } END {}'>> $RUNDIR/crossC
 echo "** Check low coverage files." 
 echo "" 
 if [[ -s filesWithLowCoverage.txt ]]      	
-	then echo "There are files with low coverage."  
+	then echo "There are files with low coverage, they will be at $RUNDIR/crossCont/lowcov/"  
 	if [[ ! -d $RUNDIR/crossCont/lowcov ]] 
     	then
     		echo "** Creating lowcov Directory." 
@@ -452,7 +457,7 @@ fi
 
 echo "** Decontaminate =>  desContam/sample/xxxx_clean.fq" 
 echo "" 
-bbsplit.sh build=1 ref_Alltypes_Refe=$REFERENCEFILEALL 2>> log.txt
+sh bbsplit.sh build=1 ref_Alltypes_Refe=$REFERENCEFILEALL 2>> log.txt
 
 for fileR1 in $RUNDIR/crossCont/*_R1*.fastq; 
 do  
@@ -599,7 +604,7 @@ do
 	fi
 done
 
-ref="";for file in $RUNDIR/crossCont/*_consdp.fasta;do ref=$ref","$file; echo $ref; done
+ref="";for file in $RUNDIR/crossCont/*_consdp.fasta;do ref=$ref","$file; done
 
 # delete first "," from $ref
 reference=`echo $ref |sed 's/^,//'` 
@@ -609,7 +614,7 @@ echo "** Classify with bbsplit"
 echo "" 
 rm -r ref 
 # create ref index
-bbsplit.sh build=1 ref=$reference 2>> log.txt
+sh bbsplit.sh build=1 ref=$reference 2>> log.txt
 
 
 for fcl in $RUNDIR/crossCont/*_clean.fq
@@ -631,15 +636,13 @@ cd $RUNDIR/crossCont/finalDir/
 #..............................................................................................#
 echo "** Obtain the number of reads  and length from finalDir files and write CcOutput.txt" 
 echo "" 
-pwd 
 
 finalDirPath=$RUNDIR/crossCont/finalDir/
-$PIPELINEDIR/results.sh $finalDirPath > $RUNDIR/crossCont/CcOutput.txt 
+sh $PIPELINEDIR/results.sh $finalDirPath > $RUNDIR/crossCont/CcOutput.txt 
 cd $RUNDIR/crossCont/ 
 
-echo "** Generate CcEnd.csv." 
+echo "** Generate CcEnd.csv at $RUNDIR/crossCont/" 
 echo "" 
-pwd 
 perl $PIPELINEDIR/results.pl $RUNDIR/crossCont/CcOutput.txt $SEQlength > $RUNDIR/crossCont/CcEnd.csv 
 
 echo "** Remove files." 

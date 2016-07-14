@@ -47,36 +47,34 @@ Copy fastq files to "/**RawData**/" directory.
 **Software that should be installed and be in $PATH:**   
 * **Samtools** Tools for alignments in the SAM format.  
      Version: samtools 1.2 Using htslib 1.2.1   
-     http://www.htslib.org/download/   
+     https://sourceforge.net/projects/samtools/files/samtools/1.2/   
 
-* **bcftools** Is a set of utilities that manipulate variant calls in the Variant Call Format (VCF) and its binary counterpart BCF.  
-     Version: 1.2 (using htslib 1.2.1).  
-     http://www.htslib.org/doc/#manual-pages  
-
-* **vcfutils.pl** It's part of the samtools distribution. If you download samtools, it should contain a "bcftools" folder, which contains vcfutils.pl. 
+* **bcftools** Is a set of utilities that manipulate variant calls in the Variant Call Format (VCF) and its binary counterpart BCF. It contains vcfutils.pl.  
+     Version: 1.2 (using htslib 1.2.1)  
+     https://sourceforge.net/projects/samtools/files/samtools/1.2/  
 
 * **BWA** Burrows-Wheeler Aligner is a software package for mapping low-divergent sequences against a large reference genome.  
-     Version: 0.7.13-r1126  
+     Version: 0.7.10_x86_64  
      https://sourceforge.net/projects/bio-bwa/files/  
 
-* **bbsplit.sh**  Is a tool that bins reads by mapping to multiple references simultaneously, using BBMap (aligner for DNA/RNAseq).   
-     Version: BBSplit / BBMap v35.x.  
-     http://seqanswers.com/forums/showthread.php?t=41288
+* **bbsplit.sh**  Is a tool that bins reads by mapping to multiple references simultaneously, using **BBMap** (aligner for DNA/RNAseq).   
+     Version: BBMap_v36.14  
+     https://sourceforge.net/projects/bbmap/  
 
 * **Rscript**  Scripting front-end. ( libraries: reshape2, RCircos; circlize )  
-     Version 3.2.0 (2015-04-16)  
+     Version 3.2.0   
      https://cran.r-project.org/
 
 * **seqtk** Toolkit for processing sequences in FASTA/Q formats.  
-     Version: 1.1-r91.  
+     Version: 1.2-r94  
      https://github.com/lh3/seqtk  
 
-* **fastq-stats** Produces statistics for the files listed.  
-     Version: 1.01.  
-     http://manpages.ubuntu.com/manpages/wily/man1/fastq-stats.1.html  
+* **fastq-stats** from **ea-utils** package. Produces statistics for the files listed.  
+     Version: ea-utils.1.1.2-537  
+     https://code.google.com/archive/p/ea-utils/downloads  
 
 ## Installation  
-Download "ViCroSeq" folder.  
+Download "ViCroSeq-master" folder.  
 Inside will be pCrossCont.sh script.  
 
 ## Running the test
