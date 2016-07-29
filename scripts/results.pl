@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 # Cristina Rodríguez  2015/12/10.
-# Will transform the data from xxxxx_CcOutput.txt  to generate a table that will be processed in cContFinal.R
+# Will transform the data from CcOutput.txt  to generate a table that will be processed in cContFinal.R
 #
 # Samples ...................
 # Samples percentage ........
@@ -26,8 +26,13 @@ chomp($headers);
 my @head=split(",",$headers); 
 print STDOUT "Samples\t";
 
+my $nucol=scalar(@head);
 for(my $i=0; $i < scalar(@head); $i++){
-	print STDOUT "$head[$i]\t";
+	print STDOUT "$head[$i]";
+	if ($i != $nucol-1 )
+        {
+		print STDOUT "\t";
+	}
 }
 print STDOUT "\n";
 
@@ -56,16 +61,25 @@ while(<INPUT>){
 foreach my $sample (sort keys %$Hfilein)
 {
 	print STDOUT "$sample\t";        # each sample row
+	my $ncol=scalar(@head);
  	for(my $i=0; $i < scalar(@head); $i++){  	
 				 
 		my $hdsample = "out_".$head[$i]."clean_consdp.fq"; 
 		if (defined $Hfilein->{$sample}->{$hdsample}->{'_numreads'})
 		{			 
 		  my $perc = ($Hfilein->{$sample}->{$hdsample}->{'_numreads'}*100)/$Htotreads->{$sample}->{'_totreads'};
-		  printf STDOUT "%.2f\t",$perc;
+		  printf STDOUT "%.2f",$perc;
+		  if ($i != $ncol-1 )
+                  {
+			print STDOUT "\t";
+		  }
 		}else
 		{
-		  printf STDOUT "%.2f\t",0;
+		  printf STDOUT "%.2f",0;
+                  if ($i != $ncol-1 )
+                  {
+			print STDOUT "\t";
+		  }
 		}
 	}
 	print STDOUT "\n";
