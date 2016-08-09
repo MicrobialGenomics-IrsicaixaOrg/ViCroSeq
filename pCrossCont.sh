@@ -301,12 +301,10 @@ while read line
 do
                 f1=`echo $line | awk -F" " '{print $1}'`     # Hepik-62_S63_L001_R1_001.fastq
 		file1=${f1%%_R1*.fastq} 
-                #file1=`echo $f1 | awk -F"_" '{print $1}'` 
                 nseq1=`echo $line | awk -F" " '{print $2}'` 
                 read line
                 f2=`echo $line | awk -F" " '{print $1}'`   
 		file2=${f2%%_R2*.fastq} 
-                #file2=`echo $f2 | awk -F"_" '{print $1}'`
                 nseq2=`echo $line | awk -F" " '{print $2}'`   
 		if [[ "$file1"="$file2" && "$nseq1" -ne "$nseq2" ]]  
                 then
