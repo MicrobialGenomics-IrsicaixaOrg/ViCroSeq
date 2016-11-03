@@ -65,10 +65,6 @@ Copy fastq files to "/**RawData**/" directory.
      Version 3.2.0   
      https://cran.r-project.org/
 
-* **seqtk** Toolkit for processing sequences in FASTA/Q formats.  
-     Version: 1.2-r94  
-     https://github.com/lh3/seqtk  
-
 * **fastq-stats** from **ea-utils** package. Produces statistics for the files listed.  
      Version: ea-utils.1.1.2-537  
      https://code.google.com/archive/p/ea-utils/downloads  
@@ -79,11 +75,11 @@ Inside will be pCrossCont.sh script.
 
 ## Running the test
 
-**pCrossCont.sh**   arg1: "path where RawData directory is located"      arg2: "Sequenced virus: HIV, HBV or HCV"      arg3: Minimum sequence length to filter (between 100 and 500)    arg4: "Project's name (please, only one word)."
+**pCrossCont.sh**   arg1: "path where RawData directory is located"      arg2: "Sequenced virus: HIV, HBV or HCV"      arg3: Minimum sequence length to filter (between 100 and 500)    arg4: "Paired (1) or single-end files (2)"       arg5: "Project's name (please, only one word)."
 
 
 `Ex:`   
-`sh ./pCrossCont.sh "/home/user/" "HIV" 100 "TestHiv"`  
+`sh ./pCrossCont.sh "/home/user/" "HIV" "100" "1" "TestHiv"`  
 
 
 

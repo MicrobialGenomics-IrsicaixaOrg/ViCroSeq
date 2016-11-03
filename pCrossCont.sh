@@ -25,15 +25,16 @@
 RUNDIR=$1  	# "/Work/data/" RawData
 Virus=$2        # "HIV","HBV", "HCV"
 SEQlength=$3 	# "Minimum Sequence length"
-PROJECT=$4 	# "Project name"
+Paired=$4       # "Paired (1) or single-end files (2)"
+PROJECT=$5 	# "Project name"
 
 CROSSCDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"   # path where ViCroSeq-master is downloaded
 
-if [[ "$RUNDIR" == "" || "$Virus" == "" || "$PROJECT" == "" ]] 
+if [[ "$RUNDIR" == "" || "$Virus" == "" || "$Paired" == "" || "$PROJECT" == "" ]] 
    then
 	echo " *---*"
- 	echo " pCrossCont.sh      arg1:path where RawData directory is located      arg2: HIV or HBV or HCV            arg3: Minimum sequence length (between 100 and 500)       arg4: Project's name (one word)."
-	echo ".fastq.gz (R1, R2) files must be in RawData dir".
+ 	echo " pCrossCont.sh      arg1:path where RawData directory is located      arg2: HIV or HBV or HCV            arg3: Minimum sequence length (between 100 and 500)       arg4: Paired-end (1) or Single-end (2) files       arg5: Project's name (one word) ."
+	echo "Files must be in RawData dir".
 	echo " *---*"
 	exit
    fi
@@ -86,6 +87,15 @@ if [[ "$SEQlength" == "" ]]
 	exit
 fi
 
+if [[ "$Paired" -ne 1 && "$Paired" -ne 2 ]] 
+   then
+	echo " *---*"
+ 	echo "  arg4 must be: 1 (paired-end) or 2 (single-end)."
+	echo " *---*"
+	exit
+   fi
+
+
 # Create directory
 #.................
 
@@ -112,9 +122,16 @@ linkf (){
 
 samf (){ 
 	local fileR1=$1 
-	fileR2=`echo $fileR1 | sed s/_R1/_R2/` 
-	samfile=${fileR1%%_R1*.fastq}_bwa.sam  
-	bwa mem $REFCOPIED $fileR1 $fileR2 > $samfile 2>> log.txt
+
+	if [[ "$Paired" -eq 1 ]]    # paired-end
+	then
+		fileR2=`echo $fileR1 | sed s/_R1/_R2/` 
+		samfile=${fileR1%%_R1*.fastq}_bwa.sam  
+		bwa mem $REFCOPIED $fileR1 $fileR2 > $samfile 2>> log.txt
+	else
+		samfile2=${fileR1%%.fastq}_bwa.sam         # singled-end
+		bwa mem $REFCOPIED $fileR1 > $samfile2 2>> log.txt		
+	fi
 }
 
 sortedf (){    #*_bwa.sam
@@ -132,26 +149,47 @@ depthf (){
 decontam (){
         local file1=$1  # *_R1*.fastq
 	fileR1=${file1##$RUNDIR/crossCont/}
-        fileR2=`echo $fileR1 | sed s/_R1/_R2/` 
-        sample=${fileR1%%_R1*.fastq} 
-        sh bbsplit.sh build=1 in1=$fileR1 in2=$fileR2 basename=$RUNDIR/crossCont/desContam/$sample/out_%.fq outu1=$RUNDIR/crossCont/desContam/$sample/clean1.fq outu2=$RUNDIR/crossCont/desContam/$sample/clean2.fq scafstats=$RUNDIR/crossCont/desContam/$sample/scafstats.txt 2>> log.txt
-   
+
+	if [[ "$Paired" -eq 1 ]]    # paired-end
+	then
+           fileR2=`echo $fileR1 | sed s/_R1/_R2/` 
+           sample=${fileR1%%_R1*.fastq} 
+           sh bbsplit.sh build=1 in1=$fileR1 in2=$fileR2 basename=$RUNDIR/crossCont/desContam/$sample/out_%.fq outu1=$RUNDIR/crossCont/desContam/$sample/clean1.fq outu2=$RUNDIR/crossCont/desContam/$sample/clean2.fq scafstats=$RUNDIR/crossCont/desContam/$sample/scafstats.txt 2>> log.txt
+        else
+           sample=${fileR1%%.fastq} # single-end
+	   sh bbsplit.sh build=1 in=$fileR1 basename=$RUNDIR/crossCont/desContam/$sample/out_%.fq outu=$RUNDIR/crossCont/desContam/$sample/clean.fq scafstats=$RUNDIR/crossCont/desContam/$sample/scafstats.txt 2>> log.txt
+
+	fi
 }
 
 sbtypref (){
 	local file1=$1  # *_R1*.fastq
 	fileR1=${file1##$RUNDIR/crossCont/}
-	sample=${fileR1%%_R1*.fastq}  
-	fileout=$sample"_clean.fq"  
-	cp $RUNDIR/crossCont/desContam/$sample/out_Alltypes_Refe.fq ./$fileout  
-   #. move to dir
-	cd $RUNDIR/crossCont/desContam/$sample/
-# Will generate subtype reference with the majority sequence  => xxx_sbtypeRef.fasta
+	if [[ "$Paired" -eq 1 ]]          # paired-end
+	then
+	   sample=${fileR1%%_R1*.fastq}  
+	   fileout=$sample"_clean.fq"  
+	   cp $RUNDIR/crossCont/desContam/$sample/out_Alltypes_Refe.fq ./$fileout  
+           # move to dir
+	   cd $RUNDIR/crossCont/desContam/$sample/
+           # Will generate subtype reference with the majority sequence  => xxx_sbtypeRef.fasta
+	   intid=`head -n 2 scafstats.txt  | grep -v '#' | awk '{print $1}'` 
+	   fileSbref=$sample"_sbtypeRef.fasta"  
+	   fgrep -A 1 $intid $REFERENCEFILEALL > $RUNDIR/crossCont/SubtypeRefs/$fileSbref 
+	   cd $RUNDIR/crossCont/ 
+       else
+	   sampleS=${fileR1%%.fastq}  # single-end
+	   fileoutS=$sampleS"_clean.fq"  
+	   cp $RUNDIR/crossCont/desContam/$sampleS/out_Alltypes_Refe.fq ./$fileoutS  
+   	   # move to dir
+	   cd $RUNDIR/crossCont/desContam/$sampleS/
+   	   # Will generate subtype reference with the majority sequence  => xxx_sbtypeRef.fasta
 
-	intid=`head -n 2 scafstats.txt  | grep -v '#' | awk '{print $1}'` 
-	fileSbref=$sample"_sbtypeRef.fasta"  
-	fgrep -A 1 $intid $REFERENCEFILEALL > $RUNDIR/crossCont/SubtypeRefs/$fileSbref 
-	cd $RUNDIR/crossCont/ 
+	   intid=`head -n 2 scafstats.txt  | grep -v '#' | awk '{print $1}'` 
+	   fileSbref=$sampleS"_sbtypeRef.fasta"  
+	   fgrep -A 1 $intid $REFERENCEFILEALL > $RUNDIR/crossCont/SubtypeRefs/$fileSbref 
+	   cd $RUNDIR/crossCont/ 
+       fi
 }
 
 sbtypind (){
@@ -178,16 +216,18 @@ sortedsam (){
 consens (){
 	local filebam=$1  # $RUNDIR/crossCont/*_NRclean_sorted.bam
 	filebamm=${filebam##$RUNDIR/crossCont/}
-	sample=${filebamm%%_NRclean_sorted.bam}  
-	fileout=$sample"_cons.fastq" 
-	fileref=$RUNDIR"/crossCont/SubtypeRefs/"$sample"_sbtypeRef.fasta" 
-	samtools mpileup -E -uf $fileref $filebam | bcftools call -c | vcfutils.pl vcf2fq > $fileout 2>> log.txt 
+	sample=${filebamm%%_NRclean_sorted.bam} 
+	fileref=$RUNDIR"/crossCont/SubtypeRefs/"$sample"_sbtypeRef.fasta"
+	out=$sample"_precons.txt"
+	samtools mpileup -f $fileref $filebamm > $out 2>> log.txt
 }
 
-fqfasta (){
-	local fileq=$1  # *_cons.fastq 
-	fileout=${fileq%%.fastq}.fasta  
-	seqtk seq -a $fileq > $fileout   
+consensend (){
+	local fileprecons=$1  # $RUNDIR/crossCont/*_precons.txt
+	fileprec=${fileprecons##$RUNDIR/crossCont/}
+	sample=${fileprec%%_precons.txt} 
+	fileout=$smple"_cons.fasta"
+	perl $PIPELINEDIR/getConsens.pl -i $fileprec> $fileout
 }
 
 depthft (){
@@ -250,11 +290,14 @@ wait
 
 # Check paired fastq files.  					
 #..............................................................................................#
-echo "** Check paired fastq files."
-echo ""
 
-for file in $RUNDIR/RawData/*.fastq;
-do
+
+if [[ "$Paired" -eq 1 ]]
+then
+   echo "** Check paired fastq files."
+   echo ""
+   for file in $RUNDIR/RawData/*.fastq;
+   do
 	if [[ "$file" =~ "R1" ]];
 	then
 		fileR2=`echo $file | sed s/_R1/_R2/`
@@ -274,15 +317,19 @@ do
 			exit
 		fi
 	fi
-done
+   done
+fi
 
 # Check number of sequences from R1 and R2 fastq files.  					
 #..............................................................................................#
-echo "** Check number of sequences from R1 and R2 fastq files."
-echo ""
 
-for file in $RUNDIR/RawData/*.fastq;
-do
+
+if [[ "$Paired" -eq 1 ]]
+then
+   echo "** Check number of sequences from R1 and R2 fastq files."
+   echo ""
+   for file in $RUNDIR/RawData/*.fastq;
+   do
 	if [[ -e $file || ! -s $file ]]
 	then
 		seq=`cat $file | wc -l` 
@@ -293,12 +340,11 @@ do
 		echo "* Err1, Checking number of sequences, $file not found or empty"
 		exit
 	fi
-done
-
-fname="$RUNDIR/RawData/Nseq.txt"  
-exec<$fname
-while read line
-do
+   done
+   fname="$RUNDIR/RawData/Nseq.txt"  
+   exec<$fname
+   while read line
+   do
                 f1=`echo $line | awk -F" " '{print $1}'`     # Hepik-62_S63_L001_R1_001.fastq
 		file1=${f1%%_R1*.fastq} 
                 nseq1=`echo $line | awk -F" " '{print $2}'` 
@@ -324,7 +370,8 @@ do
 			mv $fout1 $f1 
 			mv $fout2 $f2 			
                 fi
-done
+   done
+fi
 
 #..............................................................................................#
 #..............................................................................................#
@@ -459,18 +506,35 @@ echo "** Decontaminate =>  desContam/sample/xxxx_clean.fq"
 echo "" 
 sh bbsplit.sh build=1 ref_Alltypes_Refe=$REFERENCEFILEALL 2>> log.txt
 
-for fileR1 in $RUNDIR/crossCont/*_R1*.fastq; 
-do  
-	if [[ ! -e $fileR1 || ! -s $fileR1 ]]
+if [[ "$Paired" -eq 1 ]]    # paired-end
+then
+   for fileR1 in $RUNDIR/crossCont/*_R1*.fastq; 
+   do  
+	if [[ ! -s $fileR1 ]]
 	then     	
-		echo "* Err6, Decontaminating, $fileR1 not found or is empty."
+		echo "* Err6, Decontaminating, $fileR1  is empty."
 		exit
 	fi
-done
-for fileR1 in $RUNDIR/crossCont/*_R1*.fastq; do decontam $fileR1 & done 
-wait
-for fileR1 in $RUNDIR/crossCont/*_R1*.fastq; do sbtypref $fileR1 & done
-wait
+   done
+   for fileR1 in $RUNDIR/crossCont/*_R1*.fastq; do decontam $fileR1 & done 
+   wait
+   for fileR1 in $RUNDIR/crossCont/*_R1*.fastq; do sbtypref $fileR1 & done
+   wait
+else
+   for fileS in $RUNDIR/crossCont/*.fastq;    # singled-end
+   do  
+	if [[ ! -s $fileS ]]
+	then     	
+		echo "* Err6, Decontaminating, $fileS  is empty."
+		exit
+	fi
+   done
+   for fileS in $RUNDIR/crossCont/*.fastq; do decontam $fileS & done 
+   wait
+   for fileS in $RUNDIR/crossCont/*.fastq; do sbtypref $fileS & done
+   wait
+fi
+
 
 ####.............................................................................................####
 
@@ -481,9 +545,9 @@ echo ""
 
 for file in $RUNDIR/crossCont/SubtypeRefs/*_sbtypeRef.fasta ;
 do  
-	if [[ ! -e $file || ! -s $file ]]
+	if [[ ! -s $file ]]
 	then     	
-		echo "* Err7, Generating _sbtypeRef.fasta, $file not found or is empty."
+		echo "* Err7, Generating _sbtypeRef.fasta, $file is empty."
 		exit
 	fi
 done
@@ -492,7 +556,7 @@ wait
 
 # Align
 #..............................................................................................#
-echo "** Align   => xxx_NRclean.sam." 
+echo "** Align with  own reference => xxx_NRclean.sam." 
 echo "" 
 
 for file in $RUNDIR/crossCont/*_clean.fq ;
@@ -524,33 +588,32 @@ wait
 
 # Generate consensus (from each sample) with Samtools   => xxxxx_cons.fastq
 #..............................................................................................#
-echo "** Generate consensus sample_cons.fastq." 
+echo "** Generate pre consensus file." 
 echo "" 
 
 for fileclb in $RUNDIR/crossCont/*_NRclean_sorted.bam
 do
 	if [[ ! -e $fileclb || ! -s $fileclb ]]
 	then
-		echo "* Err10, Generating consensus sample_cons.fastq, $fileclb not found or is empty."
+		echo "* Err10, Generating pre consensus file, $fileclb not found or is empty."
 		exit
 	fi
 done
 for file in $RUNDIR/crossCont/*_NRclean_sorted.bam; do consens $file & done    
 wait 
 
-# fastq => fasta
-echo "** Transform fastq => fasta" 
+echo "** Generate consensus from precons.txt files" 
 echo "" 
 
-for file in $RUNDIR/crossCont/*_cons.fastq ;
+for file in $RUNDIR/crossCont/*_precons.txt ;
 do  
 	if [[ ! -e $file || ! -s $file ]]
 	then     	
-		echo "* Err11, Transforming fastq => fasta, $file not found or is empty."
+		echo "* Err11, Generating consensus file, $file not found or is empty."
 		exit
 	fi
 done
-for file in $RUNDIR/crossCont/*_cons.fastq ; do fqfasta $file & done    
+for file in $RUNDIR/crossCont/*_precons.txt ; do consensend $file & done    
 wait 
 
 # Generate depth files.

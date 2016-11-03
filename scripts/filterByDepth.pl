@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 # Cristina Rodríguez 2016/01/19
-# Write a fasta file from xxx__clean_cons.fasta and depth.txt
+# Write a fasta file from xxx_clean_cons.fasta and depth.txt selecting opsitions with cov > 6.
 
 use strict;
 use warnings;
@@ -23,10 +23,12 @@ open(FDEPTH,"<$fdepth") or die("cannot open $fdepth");
 
 my $Hdp={};
 my @dp;
+my $x=0;
 while(<FDEPTH>){ 
 	chomp;
 	@dp= split("\t",$_);     # id  posición coverage
-	$Hdp->{$dp[1]}->{'_cov'}=$dp[2];
+	$Hdp->{$x}->{'_cov'}=$dp[2];
+	$x++;
 }
 
 #... consensus fasta....
