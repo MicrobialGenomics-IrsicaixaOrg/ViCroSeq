@@ -29,6 +29,8 @@ along with ViCroSeq.  Otherwise, see <http://www.gnu.org/licenses/>.
 
   crossCont/**CcEnd.csv** is a percentage table where columns are the contaminants and rows are the contaminated samples.  
 
+  crossCont/**lowcow/** files with low coverage (lower than 500) will not be processed and will be moved to this directory.  
+
   **consensus files** ( crossCont/ clean_consdp.fasta ).  
 
   **cleaned fastq files** ( crossCont/ _clean.fq files ), only sequences that had mapped to Virus Reference.   

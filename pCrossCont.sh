@@ -134,6 +134,7 @@ samf (){
 		fileR2=`echo $fileR1 | sed s/_R1/_R2/` 
 		samfile=${fileR1%%_R1*.fastq}_bwa.sam  
 		bwa mem -t $ncor $REFCOPIED $fileR1 $fileR2 > $samfile 2>> log.txt
+
 	else
 		samfile2=${fileR1%%.fastq}_bwa.sam         # singled-end
 		bwa mem -t $ncor $REFCOPIED $fileR1 > $samfile2 2>> log.txt		
@@ -141,15 +142,15 @@ samf (){
 }
 
 sortedf (){    #*_bwa.sam
-	local fileR1=$1 
-	fileout=${file%%.sam}_sorted  
-	samtools view nthreads=$ncor -Shb $file | samtools sort -o $fileout 2>> log.txt   
+        local fileR1=$1
+	fileout=${file%%.sam}_sorted.bam  
+	samtools view -Shb $file | samtools sort -o $fileout 2>> log.txt   
 }
 
 depthf (){ 
 	local fileb=$1  # *_bwa_sorted.bam
 	fileout=${fileb%%_bwa_sorted.bam}_bwa_depth.txt  
-	samtools depth nthreads=$ncor $fileb >  $fileout    # K03455|HIVHXB2CG	2114	50  =>  id   posición   coverage
+	samtools depth $fileb >  $fileout    # K03455|HIVHXB2CG	2114	50  =>  id   posición   coverage
 }
 
 decontam (){
@@ -164,7 +165,6 @@ decontam (){
         else
            sample=${fileR1%%.fastq} # single-end
 	   sh bbsplit.sh build=1 threads=auto in=$fileR1 basename=$RUNDIR/crossCont/desContam/$sample/out_%.fq outu=$RUNDIR/crossCont/desContam/$sample/clean.fq scafstats=$RUNDIR/crossCont/desContam/$sample/scafstats.txt 2>> log.txt
-
 	fi
 }
 
@@ -199,9 +199,10 @@ sbtypref (){
 }
 
 sbtypind (){
+
 	local fileRef=$1  # $RUNDIR/crossCont/SubtypeRefs/*_sbtypeRef.fasta
 	refindex=${fileRef%%.fasta}  
-	bowtie2-build -p $ncor $fileRef $refindex 2>> log.txt
+	bowtie2-build $fileRef $refindex 2>> log.txt
 }
 
 
@@ -211,13 +212,13 @@ alignfq (){
 	sample=${fileff%%_clean.fq}  
 	fileref=$RUNDIR/crossCont/SubtypeRefs/$sample"_sbtypeRef" 
 	outfile=$sample"_NRclean.sam" 
- 	bowtie2 --sensitive-local -p $ncor -x $fileref -U $filef > $outfile 2>> log.txt
+ 	bowtie2 --sensitive-local  -x $fileref -U $filef > $outfile 2>> log.txt
 }
 
 sortedsam (){
 	local filesam=$1  # *_NRclean.sam
-	fileout=${filesam%%.sam}_sorted  
-	samtools view nthreads=$ncor -Shb $filesam | samtools sort -o $fileout 2>> log.txt  
+	fileout=${filesam%%.sam}_sorted.bam  
+	samtools view -Shb $filesam | samtools sort -o $fileout 2>> log.txt 
 }
 
 consens (){
@@ -226,7 +227,7 @@ consens (){
 	sample=${filebamm%%_NRclean_sorted.bam} 
 	fileref=$RUNDIR"/crossCont/SubtypeRefs/"$sample"_sbtypeRef.fasta"
 	out=$sample"_precons.txt"
-	samtools mpileup nthreads=$ncor -f $fileref $filebamm > $out 2>> log.txt
+	samtools mpileup -f $fileref $filebamm > $out 2>> log.txt
 }
 
 checkseq (){
@@ -254,7 +255,7 @@ consensend (){
 }
 
 lastclassify (){     # $RUNDIR/crossCont/*_clean.fq
-	local fileq=$1    
+	local fileq=$1   
 	fileqq=${fileq##$RUNDIR/crossCont/}
 	sample=${fileqq%%_clean.fq} 
 	sh bbsplit.sh build=1 threads=auto  in=$fileq basename=./finalDir/$sample/out_%.fq outu=./finalDir/$sample/clean.fq 2>> log.txt 
@@ -412,10 +413,21 @@ do
 		exit
 	fi
 done
-i=1
-for fileR1 in $RUNDIR/crossCont/*_R1*.fastq; do samf $fileR1 & done
-wait
 
+i=1
+for fileR1 in $RUNDIR/crossCont/*_R1*.fastq;
+        do
+        if [ "$i" -le "$ncor" ]
+           then
+                samf $fileR1 &
+                i=$((i+1))
+           else
+        	wait
+                samf $fileR1 &
+                i=1
+           fi
+done
+wait
 # Transform .sam into sorted.bam
 echo "** Transform .sam into sorted.bam." 
 echo "" 
@@ -430,7 +442,18 @@ do
 done
 
 i=1
-for file in $RUNDIR/crossCont/*_bwa.sam; do sortedf $file & done
+for file in $RUNDIR/crossCont/*_bwa.sam;
+        do
+        if [ "$i" -le "$ncor" ]
+           then
+                sortedf $file &
+                i=$((i+1))
+           else
+        	wait
+                sortedf $file &
+                i=1
+           fi
+done
 wait
 
 # Generate depth files.
@@ -447,9 +470,19 @@ do
 	fi
 done
 i=1
-for file in $RUNDIR/crossCont/*_bwa_sorted.bam; do depthf $file & done 
+for file in $RUNDIR/crossCont/*_bwa_sorted.bam;
+        do
+        if [ "$i" -le "$ncor" ]
+           then
+                depthf $file &
+                i=$((i+1))
+           else
+        	wait
+                depthf $file &
+                i=1
+           fi
+done
 wait
-
 # Generate meanCov.txt.
 #..............................................................................................#
 echo "** Generate meanCov.txt." 
@@ -486,16 +519,18 @@ if [[ -s filesWithLowCoverage.txt ]]
 	exec<$filename 
 	while read line
    	do
-		file=`echo $line | awk -F"-" '{print $1}'`   
+		file=`echo $line | awk -F" " '{print $1}'`   
 		namef=${file%%_bwa_depth.txt}_R1*.fastq    
-		mv $namef $RUNDIR/crossCont/lowcov/                                                                 
+		namef2=`echo $namef | sed s/_R1/_R2/` 
+		mv $namef $RUNDIR/crossCont/lowcov/ 
+		mv $namef2 $RUNDIR/crossCont/lowcov/                                                                
 	done
 	else echo "** There are no files with low coverage."  
 fi  
 
 
-rm *_bwa.sam 
-rm *_bwa_sorted.bam 
+rm *_bwa.sam    
+rm *_bwa_sorted.bam   
 
 ####.............................................................................................####
 
@@ -531,10 +566,33 @@ then
 		exit
 	fi
    done
-
-   for fileR1 in $RUNDIR/crossCont/*_R1*.fastq; do decontam $fileR1 & done
+   i=1
+   for fileR1 in $RUNDIR/crossCont/*_R1*.fastq;
+        do
+        if [ "$i" -le "$ncor" ]
+           then
+                decontam $fileR1 &
+                i=$((i+1))
+           else
+       		wait
+                decontam $fileR1 &
+                i=1
+           fi
+   done
    wait
-   for fileR1 in $RUNDIR/crossCont/*_R1*.fastq; do sbtypref $fileR1 & done
+   i=1
+   for fileR1 in $RUNDIR/crossCont/*_R1*.fastq;
+        do
+        if [ "$i" -le "$ncor" ]
+           then
+                sbtypref $fileR1 &
+                i=$((i+1))
+           else
+        	wait
+                sbtypref $fileR1 &
+                i=1
+           fi
+   done
    wait
 else
    for fileS in $RUNDIR/crossCont/*.fastq;    # singled-end
@@ -545,10 +603,33 @@ else
 		exit
 	fi
    done
-   i=1
-   for fileS in $RUNDIR/crossCont/*.fastq; do decontam $fileS & done 
+ i=1
+   for fileS in $RUNDIR/crossCont/*.fastq;
+        do
+        if [ "$i" -le "$ncor" ]
+           then
+                decontam $fileS &
+                i=$((i+1))
+           else
+        	wait
+                decontam $fileS &
+                i=1
+           fi
+   done   
    wait
-   for fileS in $RUNDIR/crossCont/*.fastq; do sbtypref $fileS & done
+   i=1
+   for fileS in $RUNDIR/crossCont/*.fastq;
+        do
+        if [ "$i" -le "$ncor" ]
+           then
+                sbtypref $fileS &
+                i=$((i+1))
+           else
+        	wait
+                sbtypref $fileS &
+                i=1
+           fi
+   done
    wait
 fi
 
@@ -568,7 +649,19 @@ do
 		exit
 	fi
 done
-for file in $RUNDIR/crossCont/SubtypeRefs/*_sbtypeRef.fasta; do sbtypind $file & done 
+i=1
+for file in $RUNDIR/crossCont/SubtypeRefs/*_sbtypeRef.fasta;
+        do
+        if [ "$i" -le "$ncor" ]
+           then
+                sbtypind $file &
+                i=$((i+1))
+           else
+        	wait
+                sbtypind $file &
+                i=1
+           fi
+done
 wait
 
 # Align
@@ -584,7 +677,19 @@ do
 		exit
 	fi
 done
-for file in $RUNDIR/crossCont/*_clean.fq; do alignfq $file & done 
+i=1
+for file in $RUNDIR/crossCont/*_clean.fq;
+        do
+        if [ "$i" -le "$ncor" ]
+           then
+                alignfq $file &
+                i=$((i+1))
+           else
+        	wait
+                alignfq $file &
+                i=1
+           fi
+done
 wait
 	
 # Transform .sam into sorted.bam
@@ -600,7 +705,19 @@ do
 		exit
 	fi
 done
-for file in $RUNDIR/crossCont/*_NRclean.sam; do sortedsam $file & done
+i=1
+for file in $RUNDIR/crossCont/*_NRclean.sam;
+        do
+        if [ "$i" -le "$ncor" ]
+           then
+                sortedsam $file & 
+                i=$((i+1))
+           else
+        	wait
+                sortedsam $file &
+                i=1
+           fi
+done
 wait
 
 # Generate consensus (from each sample) with Samtools   => xxxxx_cons.fastq
@@ -616,7 +733,19 @@ do
 		exit
 	fi
 done
-for file in $RUNDIR/crossCont/*_NRclean_sorted.bam; do consens $file & done    
+i=1
+for file in $RUNDIR/crossCont/*_NRclean_sorted.bam;
+        do
+        if [ "$i" -le "$ncor" ]
+           then
+                consens $file &
+                i=$((i+1))
+           else
+        	wait
+                consens $file &
+                i=1
+           fi
+done 
 wait
 
 # Check sequence's length after alignment using _bwa_depth.txt and _precons.txt files.
@@ -632,7 +761,19 @@ do
 		exit
 	fi
 done
-for filedpt in $RUNDIR/crossCont/*_bwa_depth.txt;do checkseq $filedpt & done
+i=1
+for filedpt in $RUNDIR/crossCont/*_bwa_depth.txt;
+        do
+        if [ "$i" -le "$ncor" ]
+           then
+                checkseq $filedpt &
+                i=$((i+1))
+           else
+        	wait
+                checkseq $filedpt &
+                i=1
+           fi
+done
 wait
 
 # Generate consensus from precons.txt files.
@@ -648,7 +789,19 @@ do
 		exit
 	fi
 done
-for file in $RUNDIR/crossCont/*_precons.txt ;do consensend $file & done
+i=1
+for file in $RUNDIR/crossCont/*_precons.txt ;
+        do
+        if [ "$i" -le "$ncor" ]
+           then
+                consensend $file &
+                i=$((i+1))
+           else
+        	wait
+                consensend $file &
+                i=1
+           fi
+done
 wait
 
 # Classify with bbsplit
@@ -690,7 +843,19 @@ do
 		exit
 	fi
 done
-for file in $RUNDIR/crossCont/*_clean.fq; do lastclassify $file & done
+i=1
+for file in $RUNDIR/crossCont/*_clean.fq;
+        do
+        if [ "$i" -le "$ncor" ]
+           then
+                lastclassify $file &
+                i=$((i+1))
+           else
+        	wait
+                lastclassify $file &
+                i=1
+           fi
+done
 wait
 
 #..............................................................................................#
@@ -713,7 +878,7 @@ perl $PIPELINEDIR/results.pl $RUNDIR/crossCont/CcOutput.txt $SEQlength > $RUNDIR
 echo "** Remove files." 
 echo "" 
 
-rm -r $RUNDIR/crossCont/SubtypeRefs;
+rm -r $RUNDIR/crossCont/SubtypeRefs;  
 rm -r $RUNDIR/crossCont/desContam;
 rm -r $RUNDIR/crossCont/ref;
 rm $RUNDIR/crossCont/*.sam;

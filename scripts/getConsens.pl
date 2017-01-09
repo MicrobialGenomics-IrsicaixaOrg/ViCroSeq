@@ -2,7 +2,8 @@
 
 # author: M. Cristina Rodríguez, 2016/10/19.
 # Create consensus file from "samtools mpileup  -f xxx_sbtypeRef.fasta xxx_NRclean_sorted.bam" => result file: xxx_precons.txt.
-
+# and filter positions with cov > 6.
+# 
 use strict;
 use warnings;
 use Data::Dumper;
@@ -41,8 +42,7 @@ while(<FILEIN>){
  	my @line = split("\t", $_);  
 	$header=$line[0];
 	my $RefNucleotide = $line[2];
-
-	if ( exists $line[4]) { 
+	if ($line[3] > 6){   		 # coverage should be > 6
 		$strin= $line[4];
 	}else{ next; }
  	
@@ -95,10 +95,10 @@ while(<FILEIN>){
 			$finalNucleot = $RefNucleotide;	
 		}else{
 			$finalNucleot = $keys[0];
-			if ($finalNucleot eq "A")    { if ($Na > $NA){$finalNucleot = "a"}} 
-			elsif ($finalNucleot eq "T") { if ($Na > $NA){$finalNucleot = "t"}} 
-			elsif ($finalNucleot eq "G") { if ($Na > $NA){$finalNucleot = "g"}}
-			elsif ($finalNucleot eq "C") { if ($Na > $NA){$finalNucleot = "c"}} 
+			if ($finalNucleot eq "A")    { if ($Na > $NA) {$finalNucleot = "a"}} 
+			elsif ($finalNucleot eq "T") { if ($Nt > $NT) {$finalNucleot = "t"}} 
+			elsif ($finalNucleot eq "G") { if ($Ng > $NG) {$finalNucleot = "g"}}
+			elsif ($finalNucleot eq "C") { if ($Nc > $NC) {$finalNucleot = "c"}} 
 		}
 	}else{
 # Assign nucleotide IUPAC codes
@@ -168,7 +168,6 @@ while(<FILEIN>){
 	}
 	$seqfin=$seqfin.$finalNucleot;
 }
-
 print ">$header\n";
 print "$seqfin\n";
 #print Dumper(@row);
