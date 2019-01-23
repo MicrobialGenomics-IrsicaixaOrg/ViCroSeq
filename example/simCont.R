@@ -29,5 +29,7 @@ print(sampleMatrix)
 sampleFastq<-getFastqObj(samples,dirFastq)
 print(sampleFastq)
 
+
 #Contaminate
 simulateContamination(sampleMatrix,sampleFastq)
+
