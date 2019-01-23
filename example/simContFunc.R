@@ -48,33 +48,36 @@ fileToFastq<- function(sampleName,dirFastq) {
   r1_r2<-list.files(dirFastq,pattern=paste(sampleName,'*'),full.names = TRUE)
   names(r1_r2)<-sapply(strsplit(r1_r2,'_'),`[`, 4)
   r1_r2_fastq<-sapply(r1_r2,readFastq,USE.NAMES=TRUE)
-  
+
+ 
   return (r1_r2_fastq)
 }
 
 contR1 <- function(samplesR1,nReads) {
-    # Performs the contamination of the sample reads R1 by substituting a random subset of reads from the sample to be contaminated
-    # with reads from the sample for contamination. Save the ids of these reads to substitute the same in the R2 DhortRead object.
+    # Performs the contamination of the sample reads R1 selecting a random subset of read ids from the sample to be contaminated
+    # and from the sample for contamination. Calls the function contRn to perform the contamination.
+    # Convert the ids of these reads to ids in R2 to substitute the same in the R2 ShortRead object.
     #
     # Returns a list with the sample reads R1 contaminated and the ids for R2 contamination
   
-    reads<-sapply(samplesR1, function(x){ sample(x,nReads)},USE.NAMES=TRUE)
-    idsR2<-sapply(reads, function(x){ BStringSet(gsub('1:N','2:N',id(x)))},USE.NAMES=TRUE)
+    idsR1<-sapply(names(samplesR1), function(x){ sample(id(samplesR1[[x]]),nReads)},USE.NAMES=TRUE)
+    idsR2<-sapply(idsR1, function(x){ BStringSet(gsub('1:N','2:N',x))},USE.NAMES=TRUE)
     #Substitute the reads in the sampleToCont that match the id of reads$sampleToCont with the reads in reads$sampleForCont
-    samplesR1$sampleToCont[id(samplesR1$sampleToCont)%in%id(reads$sampleToCont)]=reads$sampleForCont
+   
+    samplesR1cont<-contRn(samplesR1,idsR1)
     
-    return (list('samplesContR1'=samplesR1$sampleToCont, 'idsR2'=idsR2))
+    return (list('samplesContR1'=samplesR1cont, 'idsR2'=idsR2))
 }
 
 
-contR2 <- function(samplesR2,idsR2) {
-  #  Performs the contamination of the sample reads R1 by substituting the complementary reads that were changed in the corresponding
-  #  R1 ShortRead object.
+contRn <- function(samplesRn,idsRn) {
+  #  Performs the contamination of the sample reads Rn by substituting the reads with ids in idsRn$sampleToCont for the reads
+  #   with ids in idsRn$sampleForCont
   #  
-  #  Returns the contaminated sample reads R2 as a ShortRead onject
-  masks<-sapply(names(samplesR2),function(name) id(samplesR2[[name]]) %in% idsR2[[name]], USE.NAMES = TRUE)
-  samplesR2$sampleToCont[masks[['sampleToCont']]]=samplesR2$sampleForCont[masks[['sampleForCont']]]
-  return (samplesR2$sampleToCont)
+  #  Returns the contaminated sample reads Rn as a ShortRead object
+  masks<-sapply(names(samplesRn),function(name) which(id(samplesRn[[name]]) %in% idsRn[[name]]), USE.NAMES = TRUE)
+  samplesRn$sampleToCont[masks[,'sampleToCont']]=samplesRn$sampleForCont[masks[,'sampleForCont']]
+  return (samplesRn$sampleToCont)
 }
 
 
@@ -82,9 +85,9 @@ contPairEndReads<-function(samples,nReads,txt){
   # Perform the contamination of a pair-end sample
   #
   # Returns a list with the R1 and R2 ShortObject contaminated and the text output generated
-  
+
   result<-contR1(samples$R1,nReads)
-  samplesContR2<-contR2(samples$R2,result$idsR2)
+  samplesContR2<-contRn(samples$R2,result$idsR2)
   
   #Generate output
   txt<-c(txt,'$sampleToCont ->ids corresponding of the corresponding R2 samples to be substituted with other samples')
@@ -99,7 +102,7 @@ contPairEndReads<-function(samples,nReads,txt){
 simulateContamination <- function(sampleMatrix,sampleFastq){
  
   for (sampleName in colnames(sampleMatrix)) {
-    
+    print(sampleName)
     #obtain R1-R2 ShortRead objects for each sample
     r1r2ToCont<-sampleFastq[,sampleName]
     r1r2ForCont<-sampleFastq[,sampleMatrix['crossSamples',sampleName]]
@@ -126,7 +129,7 @@ simulateContamination <- function(sampleMatrix,sampleFastq){
     
     #write Fastq contaminated files
     lapply(names(samplesCont),function(name) {
-        fn=paste(sampleName,'cont',name,'.fastq.gz',sep='-')
+        fn=paste(sampleName,'cont',paste0(name,'.fastq.gz'),sep='_')
         if (file.exists(fn)) 
           #Delete file if it exist
           file.remove(fn)
