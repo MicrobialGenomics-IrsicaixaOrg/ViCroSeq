@@ -14,7 +14,7 @@
 #			        5-. Generate table with % of contaminant's Nº of reads per sample. 
 #				6-. Plot.
 #
-#      AUTHOR:   M. Cristina Rodríguez(crodriguez@irsicaixa.es), 
+#      AUTHOR:   M. Cristina Rodríguez(crodriguez@irsicaixa.es), M. Noguera-Julian (mnoguera@irsicaixa.es) 
 #      COMPANY:  IrsiCaixa.
 #      VERSION:  1.0
 #      CREATED:  2016/05/10
@@ -33,7 +33,7 @@ CROSSCDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"   # path where ViC
 if [[ "$RUNDIR" == "" || "$Virus" == "" || "$Paired" == "" || "$PROJECT" == "" ]] 
    then
 	echo " *---*"
- 	echo " pCrossCont.sh      arg1:path where RawData directory is located      arg2: HIV or HBV or HCV            arg3: Minimum sequence length (between 100 and 500)       arg4: Paired-end (1) or Single-end (2) files       arg5: Project's name (one word) ."
+ 	echo " pCrossCont.sh      arg1:pathrwhere RawData directory is located      arg2: HIV or HBV or HCV            arg3: Minimum sequence length (between 100 and 500)       arg4: Paired-end (1) or Single-end (2) files       arg5: Project's name (one word) ."
 	echo "Files must be in RawData dir".
 	echo " *---*"
 	exit
@@ -99,8 +99,18 @@ if [[ "$Paired" -ne 1 && "$Paired" -ne 2 ]]
 
 # Obtain number of cores.
 #.......................
-ncor=`cat /proc/cpuinfo | fgrep "cpu cores" | head -n 1 |awk '{print $4}'`;
-echo "Number of cores = $ncor."
+OS=`uname -s`
+echo $OS
+if [ $OS = "Linux" ]
+   then
+    echo "Running on a Linux Box"
+    ncor=`cat /proc/cpuinfo | fgrep "cpu cores" | head -n 1 |awk '{print $4}'`
+elif [ $OS = "Darwin" ]
+   then
+    echo "Running on a MacOS Box"
+    ncor=`sysctl  -n hw.ncpu`
+fi
+echo "Number of cores = $ncor"
 
 # Create directory
 #.................
@@ -128,7 +138,7 @@ linkf (){
 
 samf (){ 
 	local fileR1=$1 
-
+   
 	if [[ "$Paired" -eq 1 ]]    # paired-end
 	then
 		fileR2=`echo $fileR1 | sed s/_R1/_R2/` 
@@ -144,7 +154,7 @@ samf (){
 sortedf (){    #*_bwa.sam
         local fileR1=$1
 	fileout=${file%%.sam}_sorted.bam  
-	samtools view -Shb $file | samtools sort -o $fileout 2>> log.txt   
+	samtools view -@ $ncor -Shb $file | samtools sort -@ $ncor -o $fileout >> log.txt   
 }
 
 depthf (){ 
@@ -161,10 +171,10 @@ decontam (){
 	then
            fileR2=`echo $fileR1 | sed s/_R1/_R2/` 
            sample=${fileR1%%_R1*.fastq} 
-           sh bbsplit.sh build=1 threads=auto in1=$fileR1 in2=$fileR2 basename=$RUNDIR/crossCont/desContam/$sample/out_%.fq outu1=$RUNDIR/crossCont/desContam/$sample/clean1.fq outu2=$RUNDIR/crossCont/desContam/$sample/clean2.fq scafstats=$RUNDIR/crossCont/desContam/$sample/scafstats.txt 2>> log.txt
+           sh bbsplit.sh build=1 threads=$ncor in1=$fileR1 in2=$fileR2 basename=$RUNDIR/crossCont/desContam/$sample/out_%.fq outu1=$RUNDIR/crossCont/desContam/$sample/clean1.fq outu2=$RUNDIR/crossCont/desContam/$sample/clean2.fq scafstats=$RUNDIR/crossCont/desContam/$sample/scafstats.txt 2>> log.txt
         else
            sample=${fileR1%%.fastq} # single-end
-	   sh bbsplit.sh build=1 threads=auto in=$fileR1 basename=$RUNDIR/crossCont/desContam/$sample/out_%.fq outu=$RUNDIR/crossCont/desContam/$sample/clean.fq scafstats=$RUNDIR/crossCont/desContam/$sample/scafstats.txt 2>> log.txt
+	   sh bbsplit.sh build=1 threads=$ncor in=$fileR1 basename=$RUNDIR/crossCont/desContam/$sample/out_%.fq outu=$RUNDIR/crossCont/desContam/$sample/clean.fq scafstats=$RUNDIR/crossCont/desContam/$sample/scafstats.txt 2>> log.txt
 	fi
 }
 
@@ -174,7 +184,7 @@ sbtypref (){
 	if [[ "$Paired" -eq 1 ]]          # paired-end
 	then
 	   sample=${fileR1%%_R1*.fastq}  
-	   fileout=$sample"_clean.fq"  
+	   fileout=$sample"_clean.fq"  ### Note that bbmap output is not two file anymore
 	   cp $RUNDIR/crossCont/desContam/$sample/out_Alltypes_Refe.fq ./$fileout  
            # move to dir
 	   cd $RUNDIR/crossCont/desContam/$sample/
@@ -183,7 +193,7 @@ sbtypref (){
 	   fileSbref=$sample"_sbtypeRef.fasta"  
 	   fgrep -A 1 $intid $REFERENCEFILEALL > $RUNDIR/crossCont/SubtypeRefs/$fileSbref 
 	   cd $RUNDIR/crossCont/ 
-       else
+    else
 	   sampleS=${fileR1%%.fastq}  # single-end
 	   fileoutS=$sampleS"_clean.fq"  
 	   cp $RUNDIR/crossCont/desContam/$sampleS/out_Alltypes_Refe.fq ./$fileoutS  
@@ -239,7 +249,9 @@ checkseq (){
         first2=`head -n 1 $preconsfile | awk '{print $2}'`;
         lastpos2=`tail -n 1 $preconsfile | awk '{print $2}'`;
         long2=`expr $lastpos2 - $first2`;
-        if [ "$long1" -gt "$long2" ]
+		difference=`expr $long2 - $long1`
+		absdifference=${difference#-}
+    	if [ $absdifference -gt 100 ] # Covered regions is very different before and after the processs
            then
                 sample=${filedp%%_bwa_depth.txt}
                 echo "* Err. $sample sequence's length is shorter after aligning process.($long1, $long2) **."
@@ -394,8 +406,12 @@ pwd
 #..............................................................................................#
 echo "** Link files from RawData."
 echo ""
-for file in $RUNDIR/RawData/*.fastq; do echo $file; linkf $file & done 
-wait 
+for file in $RUNDIR/RawData/*.fastq
+do 
+ echo $file
+ ln -sf $file ./
+done 
+ 
 
 # Align with HXB2R  					
 #..............................................................................................#
@@ -410,24 +426,24 @@ do
 	if [[ ! -e $file || ! -s $file ]]  # file is empty
 	then     	
 		echo "* Err2, Decontaminating, $file not found or is empty."
-		exit
+		return
 	fi
 done
 
 i=1
 for fileR1 in $RUNDIR/crossCont/*_R1*.fastq;
         do
-        if [ "$i" -le "$ncor" ]
+        if [[ $i -le $ncor ]]
            then
-                samf $fileR1 &
+                samf $fileR1
                 i=$((i+1))
            else
         	wait
-                samf $fileR1 &
+                samf $fileR1
                 i=1
            fi
 done
-wait
+
 # Transform .sam into sorted.bam
 echo "** Transform .sam into sorted.bam." 
 echo "" 
@@ -437,24 +453,16 @@ do
 	if [[ ! -e $file || ! -s $file ]]
 	then
 		echo "* Err3, Transforming .sam into sorted.bam, $file not found or is empty."
-		exit
+		return
 	fi
 done
 
 i=1
 for file in $RUNDIR/crossCont/*_bwa.sam;
-        do
-        if [ "$i" -le "$ncor" ]
-           then
-                sortedf $file &
-                i=$((i+1))
-           else
-        	wait
-                sortedf $file &
-                i=1
-           fi
+do
+    sortedf $file
 done
-wait
+
 
 # Generate depth files.
 #..............................................................................................#
@@ -466,24 +474,16 @@ do
 	if [[ ! -e $file || ! -s $file ]]
 	then
 		echo "* Err4, Generate xxx_bwa_depth.txt files, $file not found or is empty."
-		exit
+		return
 	fi
 done
 i=1
 for file in $RUNDIR/crossCont/*_bwa_sorted.bam;
-        do
-        if [ "$i" -le "$ncor" ]
-           then
-                depthf $file &
-                i=$((i+1))
-           else
-        	wait
-                depthf $file &
-                i=1
-           fi
+do
+    depthf $file
 done
-wait
-# Generate meanCov.txt.
+
+# Generate meanCov.txt from the general HXB2R approximate covera.
 #..............................................................................................#
 echo "** Generate meanCov.txt." 
 echo "" 
@@ -493,16 +493,22 @@ do
 	if [[ ! -e $file || ! -s $file ]]
 	then
 		echo "* Err5, Generating meanCov.txt, $file not found or is empty."
-		exit
+		return
 	fi
 done
-for file in $RUNDIR/crossCont/*_bwa_depth.txt; do prom=`cat $file | awk '{ sum+=$3; n++} END {print sum/n}'`;echo -e "$file\t$prom" >> meanCov.txt;done
+for file in $RUNDIR/crossCont/*_bwa_depth.txt
+do 
+    prom=`cat $file | awk '{ sum+=$3; n++} END {print sum/n}'`
+	echo -e "$file\t$prom" >> meanCov.txt
+done
 
 # Generate "filesWithLowCoverage.txt", sample file's names with mean coverage lower than 500.
 #..............................................................................................#
 echo "** Generate filesWithLowCoverage.txt, samples file's names with mean coverage lower than 500." 
 echo "" 
-cat meanCov.txt |  awk '{if ($2 < 500) print $1"\t"$2 } END {}'>> $RUNDIR/crossCont/filesWithLowCoverage.txt
+
+cat meanCov.txt |  awk '{if ($2 < 500) print $1"\t"$2 } END {}' >> $RUNDIR/crossCont/filesWithLowCoverage.txt
+
 # 3000
 
 # Check low coverage files: lowcov.
@@ -538,6 +544,9 @@ rm *_bwa_sorted.bam
 
 # Decontaminate, 
 # will generate xxx_clean.fq files, with the sequences that mapped to Alltypes_Refe.fasta.
+# This step is meant to discard all non-HIV sequences, disregarding the source of the contamination
+# Because we are using bbmap suite for this, we can obtain the closest viral reference for each sample
+# and use it for a consensus reconstruction with improved quality over a generic reference based consensus.
 #..............................................................................................#
 
 if [[ ! -d $RUNDIR/crossCont/desContam ]] 
@@ -559,84 +568,47 @@ sh bbsplit.sh build=1 ref_Alltypes_Refe=$REFERENCEFILEALL 2>> log.txt
 if [[ "$Paired" -eq 1 ]]    # paired-end
 then
    for fileR1 in $RUNDIR/crossCont/*_R1*.fastq; 
-   do  
-	if [[ ! -s $fileR1 ]]
-	then     	
+    do  
+	 if [[ ! -s $fileR1 ]]
+	 then     	
 		echo "* Err6, Decontaminating, $fileR1  is empty."
-		exit
-	fi
+		return
+	 fi
    done
-   i=1
    for fileR1 in $RUNDIR/crossCont/*_R1*.fastq;
         do
-        if [ "$i" -le "$ncor" ]
-           then
-                decontam $fileR1 &
-                i=$((i+1))
-           else
-       		wait
-                decontam $fileR1 &
-                i=1
-           fi
+		    decontam $fileR1
    done
-   wait
-   i=1
+   
    for fileR1 in $RUNDIR/crossCont/*_R1*.fastq;
-        do
-        if [ "$i" -le "$ncor" ]
-           then
-                sbtypref $fileR1 &
-                i=$((i+1))
-           else
-        	wait
-                sbtypref $fileR1 &
-                i=1
-           fi
+    do
+        sbtypref $fileR1 
    done
-   wait
+
 else
    for fileS in $RUNDIR/crossCont/*.fastq;    # singled-end
    do  
 	if [[ ! -s $fileS ]]
 	then     	
 		echo "* Err6, Decontaminating, $fileS  is empty."
-		exit
+		return
 	fi
    done
- i=1
+
    for fileS in $RUNDIR/crossCont/*.fastq;
-        do
-        if [ "$i" -le "$ncor" ]
-           then
-                decontam $fileS &
-                i=$((i+1))
-           else
-        	wait
-                decontam $fileS &
-                i=1
-           fi
+   do
+       decontam $fileS 
    done   
-   wait
-   i=1
    for fileS in $RUNDIR/crossCont/*.fastq;
-        do
-        if [ "$i" -le "$ncor" ]
-           then
-                sbtypref $fileS &
-                i=$((i+1))
-           else
-        	wait
-                sbtypref $fileS &
-                i=1
-           fi
+   do
+        sbtypref $fileS
    done
-   wait
 fi
 
 
 ####.............................................................................................####
 
-# Generate index  
+# Generate index  for the specific subtype sequences
 #..............................................................................................#           
 echo "** Generate _sbtypeRef.fasta index."
 echo "" 
@@ -646,7 +618,7 @@ do
 	if [[ ! -s $file ]]
 	then     	
 		echo "* Err7, Generating _sbtypeRef.fasta, $file is empty."
-		exit
+		return
 	fi
 done
 i=1
@@ -674,24 +646,15 @@ do
 	if [[ ! -e $file || ! -s $file ]]
 	then     	
 		echo "* Err8, ALigning _clean.fq, $file not found or is empty."
-		exit
+		return
 	fi
 done
 i=1
 for file in $RUNDIR/crossCont/*_clean.fq;
-        do
-        if [ "$i" -le "$ncor" ]
-           then
-                alignfq $file &
-                i=$((i+1))
-           else
-        	wait
-                alignfq $file &
-                i=1
-           fi
+ do
+    alignfq $file &
 done
-wait
-	
+
 # Transform .sam into sorted.bam
 echo "** Transform .sam into sorted.bam."
 echo ""
@@ -702,21 +665,14 @@ do
 	if [[ ! -e $filecls || ! -s $filecls ]]
 	then
 		echo "* Err9, Transforming sam into sorted.bam, $filecls not found or is empty."
-		exit
+		return
 	fi
 done
 i=1
 for file in $RUNDIR/crossCont/*_NRclean.sam;
-        do
-        if [ "$i" -le "$ncor" ]
-           then
-                sortedsam $file & 
-                i=$((i+1))
-           else
-        	wait
-                sortedsam $file &
-                i=1
-           fi
+ do
+    sortedsam $file 
+           
 done
 wait
 
@@ -730,21 +686,13 @@ do
 	if [[ ! -e $fileclb || ! -s $fileclb ]]
 	then
 		echo "* Err10, Generating pre consensus file, $fileclb not found or is empty."
-		exit
+		return
 	fi
 done
 i=1
 for file in $RUNDIR/crossCont/*_NRclean_sorted.bam;
-        do
-        if [ "$i" -le "$ncor" ]
-           then
-                consens $file &
-                i=$((i+1))
-           else
-        	wait
-                consens $file &
-                i=1
-           fi
+ do
+    consens $file       
 done 
 wait
 
@@ -786,7 +734,7 @@ do
 	if [[ ! -e $file || ! -s $file ]]
 	then     	
 		echo "* Err11, Generating consensus file, $file not found or is empty."
-		exit
+		return
 	fi
 done
 i=1
@@ -840,7 +788,7 @@ do
 	if [[ ! -e $fcl || ! -s $fcl ]]
 	then
 		echo "* Err15, Last classifying with bbsplit, $fcl not found or is empty."
-		exit
+		return
 	fi
 done
 i=1
