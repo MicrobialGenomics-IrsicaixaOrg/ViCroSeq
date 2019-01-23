@@ -28,7 +28,7 @@ print(sampleMatrix)
 #get ShortRead objects
 sampleFastq<-getFastqObj(samples,dirFastq)
 print(sampleFastq)
-print(carmen)
+
 
 #Contaminate
 simulateContamination(sampleMatrix,sampleFastq)
